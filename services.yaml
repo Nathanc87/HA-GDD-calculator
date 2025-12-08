@@ -1,0 +1,35 @@
+reset_all:
+  name: Reset All GDD Values
+  description: Reset daily, weekly, and seasonal GDD values to zero.
+
+set_seasonal_gdd:
+  name: Set Seasonal GDD
+  description: Manually set seasonal GDD to a specific value.
+  fields:
+    value:
+      name: Seasonal GDD Value
+      description: The seasonal GDD value to set (in °C·day)
+      required: true
+      example: 250.5
+      selector:
+        number:
+          min: 0
+          max: 10000
+          step: 0.1
+          unit_of_measurement: "°C·day"
+
+set_base_temperature:
+  name: Set Base Temperature
+  description: Update the base temperature used for GDD calculations.
+  fields:
+    temperature:
+      name: Base Temperature
+      description: The base temperature in degrees Celsius
+      required: true
+      example: 14.0
+      selector:
+        number:
+          min: -10
+          max: 50
+          step: 0.1
+          unit_of_measurement: "°C"

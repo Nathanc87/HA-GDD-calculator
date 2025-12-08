@@ -1,0 +1,72 @@
+{
+  "title": "Growing Degree Days",
+  "config": {
+    "step": {
+      "user": {
+        "title": "GDD Calculator Setup",
+        "description": "Configure your Growing Degree Day calculator. Choose a weather entity that provides temperature data and set your base temperature (typically 10-15°C for most crops).",
+        "data": {
+          "weather_entity": "Weather Entity",
+          "base_temperature": "Base Temperature (°C)",
+          "calculation_method": "Calculation Method"
+        },
+        "data_description": {
+          "weather_entity": "Select the weather entity that provides temperature readings for your location",
+          "base_temperature": "Minimum temperature for plant growth (crop-specific, usually 10-15°C)",
+          "calculation_method": "Method used to calculate daily GDD values from temperature data"
+        }
+      }
+    },
+    "error": {
+      "weather_entity_not_found": "The selected weather entity was not found. Please choose a valid weather entity.",
+      "no_temperature_attribute": "The selected weather entity does not provide temperature data. Please choose a different entity."
+    },
+    "abort": {
+      "already_configured": "This GDD calculator is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Update GDD Calculator Settings", 
+        "description": "Modify your GDD calculator configuration. Note: Changing the base temperature or calculation method will affect future calculations but won't recalculate historical data.",
+        "data": {
+          "weather_entity": "Weather Entity",
+          "base_temperature": "Base Temperature (°C)",
+          "calculation_method": "Calculation Method"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "current_temp": {
+        "name": "Current Temperature"
+      },
+      "daily_min": {
+        "name": "Daily Min Temperature"
+      },
+      "daily_max": {
+        "name": "Daily Max Temperature"
+      },
+      "estimated_daily_gdd": {
+        "name": "Estimated Daily GDD"
+      },
+      "daily_gdd": {
+        "name": "Daily GDD"
+      },
+      "weekly_gdd": {
+        "name": "Weekly GDD"
+      },
+      "seasonal_gdd": {
+        "name": "Seasonal GDD"
+      },
+      "gdd_progress": {
+        "name": "GDD Progress"
+      },
+      "gdd_status": {
+        "name": "GDD Development Stage"
+      }
+    }
+  }
+}

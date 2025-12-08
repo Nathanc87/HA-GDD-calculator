@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Sun rays -->
+  <g stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+    <!-- Top ray -->
+    <line x1="12" y1="1" x2="12" y2="3"/>
+    <!-- Top-right ray -->
+    <line x1="18.36" y1="5.64" x2="16.95" y2="7.05"/>
+    <!-- Right ray -->
+    <line x1="21" y1="12" x2="19" y2="12"/>
+    <!-- Bottom-right ray -->
+    <line x1="18.36" y1="18.36" x2="16.95" y2="16.95"/>
+    <!-- Top-left ray -->
+    <line x1="5.64" y1="5.64" x2="7.05" y2="7.05"/>
+    <!-- Left ray -->
+    <line x1="3" y1="12" x2="5" y2="12"/>
+  </g>
+  
+  <!-- Sun circle -->
+  <circle cx="12" cy="12" r="4" fill="currentColor" opacity="0.8"/>
+  
+  <!-- Grass blades -->
+  <g stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round">
+    <!-- Left grass blade -->
+    <path d="M4 21 Q5 18 4 15 Q3 17 2 19 Q3 20 4 21"/>
+    <!-- Center-left grass blade -->
+    <path d="M7 21 Q8 17 7 14 Q6 16 5 18 Q6 19.5 7 21"/>
+    <!-- Center grass blade -->
+    <path d="M10 21 Q11 16 10 13 Q9 15 8 17 Q9 19 10 21"/>
+    <!-- Center-right grass blade -->
+    <path d="M14 21 Q15 16 14 13 Q13 15 12 17 Q13 19 14 21"/>
+    <!-- Right-center grass blade -->
+    <path d="M17 21 Q18 17 17 14 Q16 16 15 18 Q16 19.5 17 21"/>
+    <!-- Right grass blade -->
+    <path d="M20 21 Q21 18 20 15 Q19 17 18 19 Q19 20 20 21"/>
+  </g>
+  
+  <!-- Small temperature indicator dots -->
+  <g fill="currentColor" opacity="0.6">
+    <circle cx="9" cy="9" r="0.5"/>
+    <circle cx="15" cy="9" r="0.5"/>
+    <circle cx="9" cy="15" r="0.5"/>
+    <circle cx="15" cy="15" r="0.5"/>
+  </g>
+</svg>
