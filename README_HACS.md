@@ -192,73 +192,20 @@ cards:
       - entity: sensor.gdd_calculator_gdd_data_source
 ```
 
-### Required Input Number Helpers
+### Automatic Control Helpers
 
-To use the interactive controls, create these helpers in **Settings → Helpers**:
+The integration automatically creates these control helpers for you:
 
-**GDD Threshold Control:**
-- **Name:** GDD Threshold Control
-- **Entity ID:** `gdd_threshold_control`
-- **Min:** 50
-- **Max:** 5000
-- **Step:** 10
-- **Unit:** °C·day
-- **Icon:** mdi:target
+- **`input_number.gdd_threshold_control`** - Interactive threshold slider (50-5000, step 10)
+- **`input_number.gdd_base_temp_control`** - Base temperature slider (0-25°C, step 0.5)
 
-**Base Temperature Control:** 
-- **Name:** GDD Base Temperature Control
-- **Entity ID:** `gdd_base_temp_control`
-- **Min:** 0
-- **Max:** 25
-- **Step:** 0.5
-- **Unit:** °C
-- **Icon:** mdi:thermometer
-- **Initial:** 14
-
-### Automation for Control Sync
-
-Add these automations to sync your controls with the integration:
-
-```yaml
-# Sync threshold control to integration
-- alias: "GDD: Update Threshold from Control"
-  trigger:
-    - platform: state
-      entity_id: input_number.gdd_threshold_control
-  action:
-    - service: input_number.set_value
-      target:
-        entity_id: input_number.gdd_threshold
-      data:
-        value: "{{ states('input_number.gdd_threshold_control') }}"
-
-# Sync base temperature control to integration  
-- alias: "GDD: Update Base Temperature from Control"
-  trigger:
-    - platform: state
-      entity_id: input_number.gdd_base_temp_control
-  action:
-    - service: gdd.set_base_temperature
-      data:
-        temperature: "{{ states('input_number.gdd_base_temp_control') | float }}"
-
-# Sync main threshold to control (keeps them in sync)
-- alias: "GDD: Sync Main Threshold to Control"
-  trigger:
-    - platform: state
-      entity_id: input_number.gdd_threshold
-  action:
-    - service: input_number.set_value
-      target:
-        entity_id: input_number.gdd_threshold_control
-      data:
-        value: "{{ states('input_number.gdd_threshold') }}"
-```
+These are automatically synchronized with the integration - no manual setup required!
 
 ### All Available Entities
 
 Replace `gdd_calculator` with your actual device name:
 
+**Sensors:**
 - `sensor.gdd_calculator_current_temperature`
 - `sensor.gdd_calculator_daily_min_temperature` 
 - `sensor.gdd_calculator_daily_max_temperature`
@@ -269,37 +216,13 @@ Replace `gdd_calculator` with your actual device name:
 - `sensor.gdd_calculator_gdd_progress`
 - `sensor.gdd_calculator_gdd_development_stage`
 - `sensor.gdd_calculator_gdd_data_source`
-- `input_number.gdd_threshold`
 
-### Quick Helper Setup
+**Input Numbers (Auto-created):**
+- `input_number.gdd_threshold` (main threshold)
+- `input_number.gdd_threshold_control` (interactive control)
+- `input_number.gdd_base_temp_control` (base temperature control)
 
-To quickly create the control helpers, use Developer Tools → Services:
 
-**Create GDD Threshold Control:**
-```yaml
-service: input_number.create
-data:
-  name: "GDD Threshold Control"
-  min: 50
-  max: 5000
-  step: 10
-  initial: 300
-  unit_of_measurement: "°C·day"
-  icon: "mdi:target"
-```
-
-**Create Base Temperature Control:**
-```yaml
-service: input_number.create  
-data:
-  name: "GDD Base Temperature Control"
-  min: 0
-  max: 25
-  step: 0.5
-  initial: 14
-  unit_of_measurement: "°C"
-  icon: "mdi:thermometer"
-```
 
 ## How It Works
 
