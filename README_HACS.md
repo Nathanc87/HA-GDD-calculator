@@ -1,203 +1,135 @@
-# Growing Degree Days (GDD) Calculator for Home Assistant
+# Growing Degree Days Calculator for Home Assistant
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/release/Nathanc87/HA-GDD-calculator.svg)](https://github.com/Nathanc87/HA-GDD-calculator/releases)
 [![GitHub Activity](https://img.shields.io/github/commit-activity/y/Nathanc87/HA-GDD-calculator.svg)](https://github.com/Nathanc87/HA-GDD-calculator/commits/main)
 
-A comprehensive Home Assistant integration for calculating and monitoring **Growing Degree Days (GDD)** - essential for agricultural timing, crop monitoring, and garden management.
+Track growing degree days for better crop timing and agricultural decisions directly in Home Assistant.
 
-## 🌱 What are Growing Degree Days?
+## What is this?
 
-Growing Degree Days measure the accumulated heat units above a base temperature that plants need for development. This integration helps you:
+If you grow crops, manage orchards, or just want to time your garden better, this integration calculates Growing Degree Days (GDD) using your local weather data. GDD helps predict when to plant, when pests might emerge, and when crops will be ready to harvest.
 
-- **Time agricultural activities** (planting, fertilizing, harvesting)
-- **Monitor crop development** stages
-- **Predict pest emergence** and disease pressure
-- **Optimize irrigation** and management decisions
-- **Track seasonal progress** toward maturity targets
+Think of it as a heat accumulation meter for your plants. Different crops need different amounts of accumulated heat to reach maturity, and this helps you track that progress.
 
-## ✨ Features
+## Features
 
-### 📊 **Comprehensive Sensors**
-- **Current Temperature** - Live weather monitoring
-- **Daily Min/Max** - Automatic temperature extremes
-- **Estimated Daily GDD** - Real-time calculation preview
-- **Daily GDD** - Completed day calculations
-- **Weekly GDD** - Rolling weekly totals
-- **Seasonal GDD** - Cumulative season progress
-- **GDD Progress** - Distance from your target
-- **Development Stage** - Agricultural growth phases
+- **Real-time tracking** of daily, weekly, and seasonal heat accumulation
+- **Multiple calculation methods** (simple average, modified average, single sine)
+- **Smart temperature handling** - uses weather forecast data when available, falls back to hourly tracking
+- **Crop development stages** - see where your plants are in their growth cycle
+- **Progress tracking** - know exactly how close you are to harvest time
+- **Persistent data** - survives Home Assistant restarts and keeps your season totals
 
-### 🎯 **Smart Calculation Methods**
-- **Simple Average**: `(Tmax + Tmin)/2 - base_temp`
-- **Modified Average**: Caps temperatures at base temp
-- **Single Sine Method**: Most accurate for variable conditions
+## Installation
 
-### 🌡️ **Enhanced Temperature Data**
-- **Weather Forecast Integration** - Uses official daily min/max when available
-- **Hourly Tracking Fallback** - Monitors temperature throughout the day
-- **Combined Approach** - Uses most extreme values for accuracy
-- **Data Source Diagnostics** - Shows which method is being used
+### Via HACS
 
-### 🔧 **Easy Management**
-- **Config Flow Setup** - No YAML configuration needed
-- **Automatic Threshold Helper** - Creates input_number for your GDD target
-- **Service Calls** - Reset values and adjust settings
-- **Persistent Storage** - Survives Home Assistant restarts
-
-## 🚀 Installation
-
-### Via HACS (Recommended)
-
-1. **Add Custom Repository**:
-   - Open HACS
-   - Go to "Integrations"
-   - Click the three dots (⋮) → "Custom repositories"
+1. Add this repository to HACS as a custom integration:
+   - HACS → Integrations → ⋮ → Custom repositories
    - Add: `https://github.com/Nathanc87/HA-GDD-calculator`
-   - Category: "Integration"
+   - Category: Integration
 
-2. **Install Integration**:
-   - Search for "Growing Degree Days"
-   - Click "Download"
-   - Restart Home Assistant
-
-3. **Add Integration**:
-   - Go to Settings → Devices & Services
-   - Click "Add Integration"
-   - Search for "Growing Degree Days"
-   - Follow the setup wizard
+2. Search for "Growing Degree Days" in HACS and install
+3. Restart Home Assistant
+4. Go to Settings → Integrations → Add Integration
+5. Search for "Growing Degree Days" and configure
 
 ### Manual Installation
 
-1. Download the latest release from [GitHub](https://github.com/Nathanc87/HA-GDD-calculator/releases)
-2. Copy `custom_components/gdd/` to your `custom_components/` directory
-3. Restart Home Assistant
-4. Add the integration via Settings → Devices & Services
+Download the [latest release](https://github.com/Nathanc87/HA-GDD-calculator/releases) and copy the `custom_components/gdd` folder to your Home Assistant `custom_components` directory.
 
-## ⚙️ Configuration
+## Setup
 
-### Initial Setup
-1. **Select Weather Entity** - Choose your weather integration
-2. **Set Base Temperature** - Typically 10-15°C for most crops
-3. **Choose Calculation Method** - Simple Average recommended for most uses
-4. **Set GDD Target** - Use the automatically created helper
+You'll need:
+1. A weather integration (like OpenWeatherMap, Met.no, etc.)
+2. To know your crop's base temperature (usually 10°C for warm season crops, 4-7°C for cool season)
+3. Your target GDD for harvest (see table below)
 
-### Common Crop Targets
+The integration automatically creates a helper to set your GDD target.
 
-| Crop | GDD Target | Base Temp | Notes |
-|------|------------|-----------|-------|
-| Corn (Silage) | 800-1000 | 10°C | To physiological maturity |
-| Tomatoes | 1000-1200 | 10°C | To fruit harvest |
-| Wheat | 1400-1700 | 4°C | To grain harvest |
-| Soybeans | 1200-1500 | 10°C | To maturity |
-| Potatoes | 1200-1400 | 7°C | To harvest |
-| Apple Trees | 200-300 | 4°C | To bloom |
+## Common Crop Targets
 
-## 📊 Dashboard Examples
+| Crop | Base Temp | GDD to Maturity | Notes |
+|------|-----------|-----------------|-------|
+| Corn | 10°C | 800-1400 | Depends on variety |
+| Tomatoes | 10°C | 1000-1200 | From transplant |
+| Soybeans | 10°C | 1200-1500 | To harvest |
+| Wheat | 4°C | 1400-1700 | Winter varieties |
+| Potatoes | 7°C | 1200-1400 | From planting |
+| Peas | 4°C | 500-700 | Cool season crop |
 
-### Basic GDD Card
+*These are starting points - check with your local extension office for variety-specific recommendations*
+
+## Dashboard Example
+
 ```yaml
 type: entities
-title: GDD Monitoring
+title: Crop Progress
 entities:
   - entity: input_number.gdd_threshold
     name: Target GDD
   - entity: sensor.gdd_seasonal
-    name: Current GDD
-  - entity: sensor.gdd_progress
-    name: Progress
+    name: Accumulated GDD
   - entity: sensor.gdd_development_stage
     name: Growth Stage
+  - entity: sensor.gdd_progress
+    name: Progress to Target
 ```
 
-### Advanced GDD Dashboard
+For a visual progress bar:
 ```yaml
-type: vertical-stack
-cards:
-  - type: gauge
-    entity: sensor.gdd_seasonal
-    min: 0
-    max: 1500
-    name: Seasonal GDD Progress
-    needle: true
-    
-  - type: entities
-    entities:
-      - sensor.gdd_daily
-      - sensor.gdd_weekly
-      - sensor.gdd_development_stage
-      - sensor.gdd_data_source
-      
-  - type: history-graph
-    entities:
-      - sensor.gdd_daily
-    hours_to_show: 168
-    title: Daily GDD Trend
+type: gauge
+entity: sensor.gdd_seasonal
+min: 0
+max: 1200
+name: Season Progress
+needle: true
 ```
 
-## 🛠️ Services
+## How It Works
 
-### Reset All Values
+The integration monitors your weather entity and:
+1. Calculates daily GDD using min/max temperatures: `(max_temp + min_temp)/2 - base_temp`
+2. Only counts positive values (cold days don't subtract)
+3. Accumulates daily totals into weekly and seasonal sums
+4. Compares against your target to show development stages
+
+It prioritizes forecast data when available (more accurate than hourly sampling) but falls back to tracking temperatures throughout the day if needed.
+
+## Services
+
+Reset everything at the start of a new season:
 ```yaml
 service: gdd.reset_all
 ```
 
-### Set Seasonal GDD
+Manually adjust if you have historical data:
 ```yaml
 service: gdd.set_seasonal_gdd
 data:
-  value: 250.5
+  value: 345.2
 ```
 
-### Update Base Temperature
+Change base temperature without reconfiguring:
 ```yaml
 service: gdd.set_base_temperature
 data:
   temperature: 12.0
 ```
 
-## 🧪 Development Stages
+## Troubleshooting
 
-The integration provides meaningful agricultural development stages:
+**Values seem too high/low?**
+- Double-check your base temperature for your specific crop
+- Verify your weather integration is reporting accurate temperatures
+- Try a different calculation method in the options
 
-- 🌰 **Early Development** (0-25%) - Germination & Early Emergence
-- 🌱 **Active Growth** (25-50%) - Vegetative Growth
-- 🍃 **Advanced Growth** (50-75%) - Reproductive Development
-- 🌸 **Near Target** (75-100%) - Maturation Phase
-- 🌺 **Target Reached** - Ready for action
-- 🌿 **Target Exceeded** - Harvest Ready
+**Missing the threshold helper?**
+- It should auto-create as `input_number.gdd_threshold`
+- If not, manually create a Number helper with min: 50, max: 5000
 
-## 📈 Data Sources
-
-The integration intelligently uses the best available temperature data:
-
-1. **Weather Forecast** (Priority 1) - Official daily min/max from your weather service
-2. **Hourly Tracking** (Priority 2) - Continuous monitoring fallback
-3. **Combined Data** (Priority 3) - Most extreme values from both sources
-
-Check the "GDD Data Source" sensor to see which method is active.
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-**GDD values too high/low:**
-- Verify your base temperature is correct for your crop
-- Check that the weather entity provides accurate temperatures
-- Review the calculation method selection
-
-**Missing threshold helper:**
-- The integration creates `input_number.gdd_threshold` automatically
-- If missing, create manually in Settings → Helpers
-- Use the Number helper with range 50-5000
-
-**Temperature data gaps:**
-- Check that your weather integration is working
-- The system will use tracked temperatures as fallback
-- Monitor the "GDD Data Source" sensor
-
-### Debug Information
-
+**Want more detail?**
 Enable debug logging:
 ```yaml
 logger:
@@ -205,32 +137,14 @@ logger:
     custom_components.gdd: debug
 ```
 
-## 🤝 Contributing
+## Contributing
 
-Contributions are welcome! Please:
+Found a bug or want to add a feature? Open an issue or submit a pull request. Agricultural knowledge welcome - I'm always learning about better GDD applications.
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+## License
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Home Assistant community for the excellent platform
-- Agricultural extension services for GDD calculation methods
-- Weather service providers for temperature data
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/Nathanc87/HA-GDD-calculator/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Nathanc87/HA-GDD-calculator/discussions)
-- **Home Assistant Community**: [Community Forum](https://community.home-assistant.io/)
+MIT License - use it however helps your growing operation.
 
 ---
 
-*Perfect for farmers, gardeners, and agricultural enthusiasts who want to leverage the power of Home Assistant for crop management!* 🌾
+*Built for the Home Assistant community by someone who believes good data leads to better harvests.*
