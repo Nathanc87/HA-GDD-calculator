@@ -6,6 +6,7 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.event import async_track_state_change_event
 
 from .const import DOMAIN, DEFAULT_THRESHOLD
 from .coordinator import GDDCoordinator
@@ -32,6 +33,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Create threshold input_number if it doesn't exist
     await _ensure_threshold_entity(hass)
+    
+    # Create control helpers for frontend interaction
+    await _ensure_control_helpers(hass)
 
     # Register services
     await _register_services(hass, coordinator)
@@ -55,6 +59,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.services.async_remove(DOMAIN, "reset_all")
             hass.services.async_remove(DOMAIN, "set_seasonal_gdd")
             hass.services.async_remove(DOMAIN, "set_base_temperature")
+            _LOGGER.debug("GDD services removed")
     
     return unload_ok
 
@@ -90,6 +95,147 @@ async def _ensure_threshold_entity(hass: HomeAssistant) -> None:
     except Exception as err:
         _LOGGER.warning(f"Could not create GDD threshold input_number: {err}")
         _LOGGER.info("You can manually create input_number.gdd_threshold to set custom thresholds")
+
+
+async def _ensure_control_helpers(hass: HomeAssistant) -> None:
+    """Ensure the GDD control helper entities exist."""
+    
+    # GDD Threshold Control Helper
+    threshold_control_id = "input_number.gdd_threshold_control"
+    if threshold_control_id not in hass.states.async_entity_ids("input_number"):
+        try:
+            await hass.services.async_call(
+                "input_number",
+                "create",
+                {
+                    "name": "GDD Threshold Control",
+                    "min": 50,
+                    "max": 5000,
+                    "step": 10,
+                    "mode": "slider",
+                    "initial": 300,  # Good default for turf
+                    "unit_of_measurement": "°C·day",
+                    "icon": "mdi:target",
+                },
+                blocking=True
+            )
+            _LOGGER.info("Created GDD threshold control helper")
+        except Exception as err:
+            _LOGGER.warning(f"Could not create GDD threshold control helper: {err}")
+    
+    # Base Temperature Control Helper
+    base_temp_control_id = "input_number.gdd_base_temp_control"
+    if base_temp_control_id not in hass.states.async_entity_ids("input_number"):
+        try:
+            await hass.services.async_call(
+                "input_number",
+                "create",
+                {
+                    "name": "GDD Base Temperature Control",
+                    "min": 0,
+                    "max": 25,
+                    "step": 0.5,
+                    "mode": "slider",
+                    "initial": 14,
+                    "unit_of_measurement": "°C",
+                    "icon": "mdi:thermometer",
+                },
+                blocking=True
+            )
+            _LOGGER.info("Created GDD base temperature control helper")
+        except Exception as err:
+            _LOGGER.warning(f"Could not create GDD base temperature control helper: {err}")
+    
+    # Setup sync automations
+    await _setup_control_sync(hass)
+
+
+async def _setup_control_sync(hass: HomeAssistant) -> None:
+    """Setup synchronization between control helpers and integration."""
+    
+    async def sync_threshold_to_main(call):
+        """Sync threshold control to main threshold."""
+        control_state = hass.states.get("input_number.gdd_threshold_control")
+        if control_state:
+            try:
+                await hass.services.async_call(
+                    "input_number",
+                    "set_value",
+                    {
+                        "entity_id": "input_number.gdd_threshold",
+                        "value": float(control_state.state)
+                    },
+                    blocking=False
+                )
+            except Exception as err:
+                _LOGGER.error(f"Error syncing threshold to main: {err}")
+
+    async def sync_threshold_from_main(call):
+        """Sync main threshold to control."""
+        main_state = hass.states.get("input_number.gdd_threshold")
+        if main_state:
+            try:
+                await hass.services.async_call(
+                    "input_number",
+                    "set_value",
+                    {
+                        "entity_id": "input_number.gdd_threshold_control", 
+                        "value": float(main_state.state)
+                    },
+                    blocking=False
+                )
+            except Exception as err:
+                _LOGGER.error(f"Error syncing threshold from main: {err}")
+
+    async def sync_base_temperature(call):
+        """Sync base temperature control to integration."""
+        control_state = hass.states.get("input_number.gdd_base_temp_control")
+        if control_state:
+            try:
+                # Find the GDD coordinator
+                gdd_data = hass.data.get(DOMAIN, {})
+                for coordinator in gdd_data.values():
+                    if hasattr(coordinator, 'set_base_temperature'):
+                        coordinator.set_base_temperature(float(control_state.state))
+                        await coordinator.async_save()
+                        await coordinator.async_request_refresh()
+                        break
+            except Exception as err:
+                _LOGGER.error(f"Error syncing base temperature: {err}")
+
+    # Register state change listeners
+    async def threshold_control_changed(entity_id, old_state, new_state):
+        if new_state and old_state and new_state.state != old_state.state:
+            await sync_threshold_to_main(None)
+
+    async def threshold_main_changed(entity_id, old_state, new_state):
+        if new_state and old_state and new_state.state != old_state.state:
+            await sync_threshold_from_main(None)
+
+    async def base_temp_changed(entity_id, old_state, new_state):
+        if new_state and old_state and new_state.state != old_state.state:
+            await sync_base_temperature(None)
+
+    # Setup listeners
+    async_track_state_change_event(
+        hass,
+        "input_number.gdd_threshold_control",
+        threshold_control_changed
+    )
+    
+    async_track_state_change_event(
+        hass,
+        "input_number.gdd_threshold", 
+        threshold_main_changed
+    )
+    
+    async_track_state_change_event(
+        hass,
+        "input_number.gdd_base_temp_control",
+        base_temp_changed
+    )
+    
+    _LOGGER.debug("GDD control synchronization setup complete")
 
 
 async def _register_services(hass: HomeAssistant, coordinator: GDDCoordinator) -> None:
