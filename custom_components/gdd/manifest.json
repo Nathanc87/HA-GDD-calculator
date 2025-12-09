@@ -1,7 +1,7 @@
 {
   "domain": "gdd",
   "name": "Growing Degree Days",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "documentation": "https://github.com/Nathanc87/HA-GDD-calculator",
   "issue_tracker": "https://github.com/Nathanc87/HA-GDD-calculator/issues",
   "requirements": [],
