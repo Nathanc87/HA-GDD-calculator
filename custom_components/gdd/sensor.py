@@ -421,8 +421,8 @@ class GDDGrowthRateSensor(GDDBaseSensor):
     def extra_state_attributes(self) -> dict:
         """Return additional attributes."""
         attrs = {}
-        if hasattr(self.coordinator, 'estimated_growth_inches'):
-            attrs['daily_growth_inches'] = round(self.coordinator.estimated_growth_inches, 3)
+        if hasattr(self.coordinator, 'estimated_growth_mm'):
+            attrs['daily_growth_mm'] = round(self.coordinator.estimated_growth_mm, 1)
         if hasattr(self.coordinator, 'weekly_gdd'):
             attrs['weekly_gdd'] = self.coordinator.weekly_gdd
         return attrs
@@ -452,7 +452,7 @@ class GDDMowingRecommendationSensor(GDDBaseSensor):
         """Return additional mowing info."""
         attrs = {}
         if hasattr(self.coordinator, 'accumulated_growth'):
-            attrs['accumulated_growth_inches'] = round(self.coordinator.accumulated_growth, 3)
+            attrs['accumulated_growth_mm'] = round(self.coordinator.accumulated_growth, 1)
         if hasattr(self.coordinator, 'days_since_mow'):
             attrs['days_since_mow'] = self.coordinator.days_since_mow
         if hasattr(self.coordinator, 'days_to_next_mow'):
@@ -547,14 +547,14 @@ class GDDAccumulatedGrowthSensor(GDDBaseSensor):
     
     _attr_name = "Accumulated Growth"
     _attr_unique_id = "gdd_accumulated_growth"
-    _attr_native_unit_of_measurement = "in"
+    _attr_native_unit_of_measurement = "mm"
     _attr_state_class = SensorStateClass.TOTAL
     _attr_device_class = "distance"
     _attr_icon = "mdi:ruler"
 
     @property
     def native_value(self) -> Optional[float]:
-        """Return accumulated growth in inches."""
+        """Return accumulated growth in millimeters."""
         if hasattr(self.coordinator, 'accumulated_growth'):
-            return round(self.coordinator.accumulated_growth, 3)
+            return round(self.coordinator.accumulated_growth, 1)
         return None
