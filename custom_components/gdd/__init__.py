@@ -59,6 +59,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.services.async_remove(DOMAIN, "reset_all")
             hass.services.async_remove(DOMAIN, "set_seasonal_gdd")
             hass.services.async_remove(DOMAIN, "set_base_temperature")
+            hass.services.async_remove(DOMAIN, "record_mowing")
             _LOGGER.debug("GDD services removed")
     
     return unload_ok
@@ -145,6 +146,44 @@ async def _ensure_control_helpers(hass: HomeAssistant) -> None:
             _LOGGER.info("Created GDD base temperature control helper")
         except Exception as err:
             _LOGGER.warning(f"Could not create GDD base temperature control helper: {err}")
+    
+    # Turf Type Helper
+    turf_type_id = "input_select.gdd_turf_type"
+    if turf_type_id not in hass.states.async_entity_ids("input_select"):
+        try:
+            await hass.services.async_call(
+                "input_select",
+                "create",
+                {
+                    "name": "GDD Turf Type",
+                    "options": ["cool_season", "warm_season"],
+                    "initial": "cool_season",
+                    "icon": "mdi:grass",
+                },
+                blocking=True
+            )
+            _LOGGER.info("Created GDD turf type helper")
+        except Exception as err:
+            _LOGGER.warning(f"Could not create GDD turf type helper: {err}")
+
+    # Maintenance Level Helper
+    maintenance_id = "input_select.gdd_maintenance_level"
+    if maintenance_id not in hass.states.async_entity_ids("input_select"):
+        try:
+            await hass.services.async_call(
+                "input_select",
+                "create",
+                {
+                    "name": "GDD Maintenance Level",
+                    "options": ["low_maintenance", "medium_maintenance", "high_maintenance"],
+                    "initial": "medium_maintenance",
+                    "icon": "mdi:cog",
+                },
+                blocking=True
+            )
+            _LOGGER.info("Created GDD maintenance level helper")
+        except Exception as err:
+            _LOGGER.warning(f"Could not create GDD maintenance level helper: {err}")
     
     # Setup sync automations
     await _setup_control_sync(hass)
@@ -281,10 +320,20 @@ async def _register_services(hass: HomeAssistant, coordinator: GDDCoordinator) -
         except Exception as err:
             _LOGGER.error(f"Error setting base temperature: {err}")
 
+    async def record_mowing_service(call: ServiceCall):
+        """Service to record mowing event."""
+        try:
+            coordinator.record_mowing()
+            await coordinator.async_save()
+            _LOGGER.info("Mowing event recorded via service call")
+        except Exception as err:
+            _LOGGER.error(f"Error recording mowing event: {err}")
+
     # Register services
     hass.services.async_register(DOMAIN, "reset_all", reset_all_service)
     hass.services.async_register(DOMAIN, "set_seasonal_gdd", set_seasonal_service)
     hass.services.async_register(DOMAIN, "set_base_temperature", set_base_temp_service)
+    hass.services.async_register(DOMAIN, "record_mowing", record_mowing_service)
     
     _LOGGER.debug("GDD services registered")
 
