@@ -50,9 +50,9 @@ class GDDCoordinator(DataUpdateCoordinator):
         # Turf growth tracking
         self.weekly_gdd_history = []  # Last 4 weeks for trending
         self.growth_multiplier = 1.0
-        self.estimated_growth_inches = 0.0
+        self.estimated_growth_mm = 0.0  # Daily growth in millimeters
         self.days_since_mow = 0
-        self.accumulated_growth = 0.0
+        self.accumulated_growth = 0.0  # Total growth in mm
         
         # Tracking variables
         self.last_calculation_date: Optional[str] = None
@@ -337,11 +337,10 @@ class GDDCoordinator(DataUpdateCoordinator):
 
     def _calculate_turf_growth(self, daily_gdd: float):
         """Calculate daily turf growth and update accumulated growth."""
-        # Get turf type from helper (default to cool_season)
-        turf_type = self._get_turf_type()
-        growth_config = TURF_GROWTH_RATES[turf_type]
+        # Use warm season grass defaults
+        growth_config = TURF_GROWTH_RATES
         
-        # Calculate daily growth in inches
+        # Calculate daily growth in mm
         base_growth = growth_config["base_growth_rate"]
         daily_growth = daily_gdd * base_growth
         
@@ -352,23 +351,12 @@ class GDDCoordinator(DataUpdateCoordinator):
         # Update accumulated growth
         self.accumulated_growth += actual_growth
         self.growth_multiplier = multiplier
-        self.estimated_growth_inches = actual_growth
+        self.estimated_growth_mm = actual_growth
         
         _LOGGER.debug(
-            f"Turf growth: {daily_gdd:.1f} GDD → {actual_growth:.3f}\" "
-            f"(multiplier: {multiplier:.2f}x, total: {self.accumulated_growth:.2f}\")"
+            f"Turf growth: {daily_gdd:.1f} GDD → {actual_growth:.1f}mm "
+            f"(multiplier: {multiplier:.2f}x, total: {self.accumulated_growth:.1f}mm)"
         )
-
-    def _get_turf_type(self) -> str:
-        """Determine turf type from helper or base temperature."""
-        # Check if user has set turf type helper
-        turf_type_state = self.hass.states.get("input_select.gdd_turf_type")
-        if turf_type_state and turf_type_state.state:
-            return turf_type_state.state
-        
-        # Fallback: guess based on base temperature
-        # Cool season grasses typically use lower base temps
-        return "cool_season" if self.base_temp <= 10 else "warm_season"
 
     def _calculate_growth_multiplier(self, daily_gdd: float, growth_config: dict) -> float:
         """Calculate growth rate multiplier based on GDD conditions."""
@@ -497,8 +485,8 @@ class GDDCoordinator(DataUpdateCoordinator):
         remaining_growth = max(0, threshold - self.accumulated_growth)
         
         # Estimate based on recent growth rate
-        if self.estimated_growth_inches > 0:
-            return max(1, int(remaining_growth / self.estimated_growth_inches))
+        if self.estimated_growth_mm > 0:
+            return max(1, int(remaining_growth / self.estimated_growth_mm))
         
         return 7  # Default weekly interval
 
