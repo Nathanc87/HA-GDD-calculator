@@ -52,7 +52,7 @@ class GDDBaseSensor(SensorEntity, RestoreEntity):
             manufacturer="Custom",
             name="GDD Calculator",
             model="Growing Degree Day Engine",
-            sw_version="1.1.0",
+            sw_version="1.1.1",
             suggested_area="Garden",
         )
 
