@@ -6,6 +6,30 @@
 
 Track growing degree days for better crop timing and agricultural decisions directly in Home Assistant.
 
+## 📈 Growth Rate Predictor (Turf Focus)
+
+Perfect for lawn care professionals and enthusiasts! The integration includes advanced turf management features:
+
+**🌱 Smart Growth Tracking:**
+- Calculates actual grass growth in inches based on GDD
+- Adjusts for cool-season vs warm-season grasses
+- Accounts for optimal growth ranges and stress conditions
+
+**🚜 Mowing Intelligence:**
+- Predicts when mowing is needed based on accumulated growth
+- Provides maintenance-level recommendations (low/medium/high)
+- Tracks days since last mowing
+
+**💉 PGR Recommendations:**
+- Suggests Plant Growth Regulator timing based on weekly GDD
+- Preventive, active, and rescue application recommendations
+- Helps optimize growth control strategies
+
+**📊 Growth Forecasting:**
+- "Based on this week's GDD, expect 2.1× normal growth. Recommend mowing twice."
+- Real-time growth rate multipliers
+- Predictive maintenance scheduling
+
 ## What is this?
 
 If you grow crops, manage orchards, or just want to time your garden better, this integration calculates Growing Degree Days (GDD) using your local weather data. GDD helps predict when to plant, when pests might emerge, and when crops will be ready to harvest.
@@ -135,6 +159,56 @@ entities:
     name: Progress to Target
 ```
 
+### Turf Management Dashboard
+```yaml
+type: vertical-stack
+title: Lawn Care Command Center
+cards:
+  # Growth Status Overview
+  - type: entities
+    title: Growth Status
+    entities:
+      - entity: sensor.gdd_calculator_growth_forecast
+        name: Growth Forecast
+        icon: mdi:chart-line-variant
+      - entity: sensor.gdd_calculator_growth_rate_multiplier
+        name: Growth Rate
+        icon: mdi:trending-up
+      - entity: sensor.gdd_calculator_accumulated_growth
+        name: Growth Since Mow
+        icon: mdi:ruler
+        
+  # Maintenance Recommendations
+  - type: entities
+    title: Maintenance Alerts
+    entities:
+      - entity: sensor.gdd_calculator_mowing_recommendation
+        name: Mowing Status
+        icon: mdi:lawn-mower
+      - entity: sensor.gdd_calculator_pgr_recommendation
+        name: PGR Status
+        icon: mdi:spray
+      - type: button
+        name: Record Mowing
+        icon: mdi:lawn-mower-outline
+        tap_action:
+          action: call-service
+          service: gdd.record_mowing
+          confirmation:
+            text: "Record that you mowed the lawn?"
+            
+  # Turf Settings
+  - type: entities
+    title: Turf Settings
+    entities:
+      - entity: input_select.gdd_turf_type
+        name: Grass Type
+      - entity: input_select.gdd_maintenance_level
+        name: Maintenance Level
+      - entity: input_number.gdd_base_temp_control
+        name: Base Temperature
+```
+
 ### Interactive GDD Control Panel
 ```yaml
 type: entities
@@ -216,11 +290,20 @@ Replace `gdd_calculator` with your actual device name:
 - `sensor.gdd_calculator_gdd_progress`
 - `sensor.gdd_calculator_gdd_development_stage`
 - `sensor.gdd_calculator_gdd_data_source`
+- `sensor.gdd_calculator_growth_rate_multiplier` ⭐
+- `sensor.gdd_calculator_mowing_recommendation` ⭐
+- `sensor.gdd_calculator_pgr_recommendation` ⭐
+- `sensor.gdd_calculator_growth_forecast` ⭐
+- `sensor.gdd_calculator_accumulated_growth` ⭐
 
 **Input Numbers (Auto-created):**
 - `input_number.gdd_threshold` (main threshold)
 - `input_number.gdd_threshold_control` (interactive control)
 - `input_number.gdd_base_temp_control` (base temperature control)
+
+**Input Selects (Auto-created):**
+- `input_select.gdd_turf_type` (cool_season/warm_season)
+- `input_select.gdd_maintenance_level` (low/medium/high maintenance)
 
 
 
@@ -253,6 +336,11 @@ Change base temperature without reconfiguring:
 service: gdd.set_base_temperature
 data:
   temperature: 12.0
+```
+
+Record when you mow to reset growth tracking:
+```yaml
+service: gdd.record_mowing
 ```
 
 ## Troubleshooting
