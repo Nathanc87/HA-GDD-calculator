@@ -147,25 +147,6 @@ async def _ensure_control_helpers(hass: HomeAssistant) -> None:
         except Exception as err:
             _LOGGER.warning(f"Could not create GDD base temperature control helper: {err}")
     
-    # Turf Type Helper
-    turf_type_id = "input_select.gdd_turf_type"
-    if turf_type_id not in hass.states.async_entity_ids("input_select"):
-        try:
-            await hass.services.async_call(
-                "input_select",
-                "create",
-                {
-                    "name": "GDD Turf Type",
-                    "options": ["cool_season", "warm_season"],
-                    "initial": "cool_season",
-                    "icon": "mdi:grass",
-                },
-                blocking=True
-            )
-            _LOGGER.info("Created GDD turf type helper")
-        except Exception as err:
-            _LOGGER.warning(f"Could not create GDD turf type helper: {err}")
-
     # Maintenance Level Helper
     maintenance_id = "input_select.gdd_maintenance_level"
     if maintenance_id not in hass.states.async_entity_ids("input_select"):
