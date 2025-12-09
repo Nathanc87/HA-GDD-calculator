@@ -11,9 +11,9 @@ Track growing degree days for better crop timing and agricultural decisions dire
 Perfect for lawn care professionals and enthusiasts! The integration includes advanced turf management features:
 
 **🌱 Smart Growth Tracking:**
-- Calculates actual grass growth in inches based on GDD
-- Adjusts for cool-season vs warm-season grasses
-- Accounts for optimal growth ranges and stress conditions
+- Calculates actual grass growth in millimeters based on GDD
+- Optimized for warm season grasses (Bermuda, Couch, Zoysia, Buffalo)
+- Adjusts for optimal growth ranges and stress conditions
 
 **🚜 Mowing Intelligence:**
 - Predicts when mowing is needed based on accumulated growth
@@ -201,8 +201,6 @@ cards:
   - type: entities
     title: Turf Settings
     entities:
-      - entity: input_select.gdd_turf_type
-        name: Grass Type
       - entity: input_select.gdd_maintenance_level
         name: Maintenance Level
       - entity: input_number.gdd_base_temp_control
@@ -302,7 +300,6 @@ Replace `gdd_calculator` with your actual device name:
 - `input_number.gdd_base_temp_control` (base temperature control)
 
 **Input Selects (Auto-created):**
-- `input_select.gdd_turf_type` (cool_season/warm_season)
 - `input_select.gdd_maintenance_level` (low/medium/high maintenance)
 
 
