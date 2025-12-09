@@ -28,6 +28,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         GDDProgressSensor(coordinator, entry, hass),
         GDDStatusSensor(coordinator, entry, hass),
         GDDDataSourceSensor(coordinator, entry),
+        GDDGrowthRateSensor(coordinator, entry),
+        GDDMowingRecommendationSensor(coordinator, entry, hass),
+        GDDPGRRecommendationSensor(coordinator, entry),
+        GDDGrowthForecastSensor(coordinator, entry),
+        GDDAccumulatedGrowthSensor(coordinator, entry),
     ]
 
     async_add_entities(sensors)
@@ -144,7 +149,7 @@ class GDDDailySensor(GDDBaseSensor):
     _attr_unique_id = "gdd_daily"
     _attr_native_unit_of_measurement = "°C·day"
     _attr_state_class = SensorStateClass.TOTAL
-    _attr_icon = "mdi:calendar-today"
+    _attr_icon = "mdi:weather-sunny"
 
     @property
     def native_value(self) -> Optional[float]:
@@ -161,7 +166,7 @@ class GDDWeeklySensor(GDDBaseSensor):
     _attr_unique_id = "gdd_weekly"
     _attr_native_unit_of_measurement = "°C·day"
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
-    _attr_icon = "mdi:calendar-week"
+    _attr_icon = "mdi:fire"
 
     @property
     def native_value(self) -> Optional[float]:
@@ -178,7 +183,7 @@ class GDDSeasonalSensor(GDDBaseSensor):
     _attr_unique_id = "gdd_seasonal"
     _attr_native_unit_of_measurement = "°C·day"
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
-    _attr_icon = "mdi:calendar-range"
+    _attr_icon = "mdi:sun"
 
     @property
     def native_value(self) -> Optional[float]:
@@ -195,7 +200,7 @@ class GDDProgressSensor(GDDBaseSensor):
     _attr_unique_id = "gdd_progress"
     _attr_native_unit_of_measurement = "°C·day"
     _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_icon = "mdi:progress-check"
+    _attr_icon = "mdi:trending-up"
 
     def __init__(self, coordinator: GDDCoordinator, entry: ConfigEntry, hass: HomeAssistant):
         super().__init__(coordinator, entry)
@@ -394,3 +399,162 @@ class GDDDataSourceSensor(GDDBaseSensor):
             return "mdi:thermometer"
         else:
             return "mdi:alert-circle"
+
+
+class GDDGrowthRateSensor(GDDBaseSensor):
+    """Turf growth rate multiplier sensor."""
+    
+    _attr_name = "Growth Rate Multiplier"
+    _attr_unique_id = "gdd_growth_rate"
+    _attr_native_unit_of_measurement = "×"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_icon = "mdi:trending-up"
+
+    @property
+    def native_value(self) -> Optional[float]:
+        """Return growth rate multiplier."""
+        if hasattr(self.coordinator, 'growth_rate_multiplier'):
+            return round(self.coordinator.growth_rate_multiplier, 2)
+        return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return additional attributes."""
+        attrs = {}
+        if hasattr(self.coordinator, 'estimated_growth_inches'):
+            attrs['daily_growth_inches'] = round(self.coordinator.estimated_growth_inches, 3)
+        if hasattr(self.coordinator, 'weekly_gdd'):
+            attrs['weekly_gdd'] = self.coordinator.weekly_gdd
+        return attrs
+
+
+class GDDMowingRecommendationSensor(GDDBaseSensor):
+    """Mowing recommendation sensor."""
+    
+    _attr_name = "Mowing Recommendation"
+    _attr_unique_id = "gdd_mowing_recommendation"
+    _attr_native_unit_of_measurement = None
+    _attr_icon = "mdi:lawn-mower"
+
+    def __init__(self, coordinator: GDDCoordinator, entry: ConfigEntry, hass: HomeAssistant):
+        super().__init__(coordinator, entry)
+        self.hass = hass
+
+    @property
+    def native_value(self) -> str:
+        """Return mowing recommendation."""
+        if hasattr(self.coordinator, 'mowing_recommendation'):
+            return self.coordinator.mowing_recommendation
+        return "Unknown"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return additional mowing info."""
+        attrs = {}
+        if hasattr(self.coordinator, 'accumulated_growth'):
+            attrs['accumulated_growth_inches'] = round(self.coordinator.accumulated_growth, 3)
+        if hasattr(self.coordinator, 'days_since_mow'):
+            attrs['days_since_mow'] = self.coordinator.days_since_mow
+        if hasattr(self.coordinator, 'days_to_next_mow'):
+            attrs['estimated_days_to_mow'] = self.coordinator.days_to_next_mow
+        return attrs
+
+    @property
+    def icon(self) -> str:
+        """Return icon based on recommendation urgency."""
+        recommendation = self.native_value
+        if "critical" in recommendation.lower():
+            return "mdi:lawn-mower-alert"
+        elif "overdue" in recommendation.lower():
+            return "mdi:lawn-mower-outline"
+        elif "recommended" in recommendation.lower():
+            return "mdi:lawn-mower"
+        elif "soon" in recommendation.lower():
+            return "mdi:timer-sand"
+        else:
+            return "mdi:check-circle"
+
+
+class GDDPGRRecommendationSensor(GDDBaseSensor):
+    """PGR application recommendation sensor."""
+    
+    _attr_name = "PGR Recommendation"
+    _attr_unique_id = "gdd_pgr_recommendation"
+    _attr_native_unit_of_measurement = None
+    _attr_icon = "mdi:spray"
+
+    @property
+    def native_value(self) -> str:
+        """Return PGR recommendation."""
+        if hasattr(self.coordinator, 'pgr_recommendation'):
+            return self.coordinator.pgr_recommendation
+        return "Unknown"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return additional PGR info."""
+        attrs = {}
+        if hasattr(self.coordinator, 'weekly_gdd'):
+            attrs['weekly_gdd'] = self.coordinator.weekly_gdd
+        if hasattr(self.coordinator, 'weekly_gdd_history') and self.coordinator.weekly_gdd_history:
+            attrs['average_weekly_gdd'] = round(
+                sum(self.coordinator.weekly_gdd_history) / len(self.coordinator.weekly_gdd_history), 1
+            )
+        return attrs
+
+    @property
+    def icon(self) -> str:
+        """Return icon based on PGR urgency."""
+        recommendation = self.native_value
+        if "rescue" in recommendation.lower():
+            return "mdi:spray-bottle"
+        elif "active" in recommendation.lower():
+            return "mdi:spray"
+        elif "preventive" in recommendation.lower():
+            return "mdi:shield-outline"
+        else:
+            return "mdi:check-circle-outline"
+
+
+class GDDGrowthForecastSensor(GDDBaseSensor):
+    """Growth forecast sensor."""
+    
+    _attr_name = "Growth Forecast"
+    _attr_unique_id = "gdd_growth_forecast"
+    _attr_native_unit_of_measurement = None
+    _attr_icon = "mdi:chart-line-variant"
+
+    @property
+    def native_value(self) -> str:
+        """Return growth forecast."""
+        if hasattr(self.coordinator, 'growth_forecast'):
+            return self.coordinator.growth_forecast
+        return "Unknown"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return forecast details."""
+        attrs = {}
+        if hasattr(self.coordinator, 'growth_rate_multiplier'):
+            attrs['growth_multiplier'] = self.coordinator.growth_rate_multiplier
+        if hasattr(self.coordinator, 'estimated_daily_gdd'):
+            attrs['estimated_daily_gdd'] = self.coordinator.estimated_daily_gdd
+        return attrs
+
+
+class GDDAccumulatedGrowthSensor(GDDBaseSensor):
+    """Accumulated turf growth sensor."""
+    
+    _attr_name = "Accumulated Growth"
+    _attr_unique_id = "gdd_accumulated_growth"
+    _attr_native_unit_of_measurement = "in"
+    _attr_state_class = SensorStateClass.TOTAL
+    _attr_device_class = "distance"
+    _attr_icon = "mdi:ruler"
+
+    @property
+    def native_value(self) -> Optional[float]:
+        """Return accumulated growth in inches."""
+        if hasattr(self.coordinator, 'accumulated_growth'):
+            return round(self.coordinator.accumulated_growth, 3)
+        return None
