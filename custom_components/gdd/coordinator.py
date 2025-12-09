@@ -13,7 +13,8 @@ from homeassistant.util import dt as dt_util
 from .const import (
     DOMAIN, CONF_WEATHER, CONF_BASE_TEMP, CONF_CALCULATION_METHOD,
     STORAGE_KEY, STORAGE_VERSION, UPDATE_INTERVAL_HOURS,
-    METHOD_SIMPLE_AVERAGE, METHOD_MODIFIED_AVERAGE, METHOD_SINGLE_SINE
+    METHOD_SIMPLE_AVERAGE, METHOD_MODIFIED_AVERAGE, METHOD_SINGLE_SINE,
+    TURF_GROWTH_RATES, MOWING_THRESHOLDS, PGR_THRESHOLDS
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -46,6 +47,13 @@ class GDDCoordinator(DataUpdateCoordinator):
         self.weekly_gdd = 0.0
         self.seasonal_gdd = 0.0
         
+        # Turf growth tracking
+        self.weekly_gdd_history = []  # Last 4 weeks for trending
+        self.growth_multiplier = 1.0
+        self.estimated_growth_inches = 0.0
+        self.days_since_mow = 0
+        self.accumulated_growth = 0.0
+        
         # Tracking variables
         self.last_calculation_date: Optional[str] = None
         self.last_week_number: Optional[int] = None
@@ -75,6 +83,9 @@ class GDDCoordinator(DataUpdateCoordinator):
                 self.tracked_daily_min = data.get("tracked_daily_min")
                 self.tracked_daily_max = data.get("tracked_daily_max")
                 self.daily_temps = data.get("daily_temps", [])
+                self.weekly_gdd_history = data.get("weekly_gdd_history", [])
+                self.days_since_mow = data.get("days_since_mow", 0)
+                self.accumulated_growth = data.get("accumulated_growth", 0.0)
                 _LOGGER.info(f"Loaded GDD data: seasonal={self.seasonal_gdd}")
         except Exception as err:
             _LOGGER.error(f"Error loading GDD data: {err}")
@@ -91,6 +102,9 @@ class GDDCoordinator(DataUpdateCoordinator):
                 "tracked_daily_min": self.tracked_daily_min,
                 "tracked_daily_max": self.tracked_daily_max,
                 "daily_temps": self.daily_temps[-48:],  # Keep last 48 hours
+                "weekly_gdd_history": self.weekly_gdd_history[-4:],  # Keep last 4 weeks
+                "days_since_mow": self.days_since_mow,
+                "accumulated_growth": self.accumulated_growth,
             }
             await self.store.async_save(data)
         except Exception as err:
@@ -258,6 +272,11 @@ class GDDCoordinator(DataUpdateCoordinator):
             
             if last_week_key and week_key != last_week_key:
                 _LOGGER.info(f"New week detected: {week_key}, resetting weekly GDD")
+                # Store previous week's GDD in history
+                if self.weekly_gdd > 0:
+                    self.weekly_gdd_history.append(self.weekly_gdd)
+                    if len(self.weekly_gdd_history) > 4:  # Keep last 4 weeks
+                        self.weekly_gdd_history.pop(0)
                 self.weekly_gdd = 0.0
 
             self.last_calculation_date = today_str
@@ -307,10 +326,72 @@ class GDDCoordinator(DataUpdateCoordinator):
         self.weekly_gdd += daily_gdd
         self.seasonal_gdd += daily_gdd
 
+        # Update turf growth tracking
+        self.days_since_mow += 1
+        self._calculate_turf_growth(daily_gdd)
+
         # Reset daily tracking for new day
         self.tracked_daily_min = self.current_temp
         self.tracked_daily_max = self.current_temp
         self.daily_temps = []
+
+    def _calculate_turf_growth(self, daily_gdd: float):
+        """Calculate daily turf growth and update accumulated growth."""
+        # Get turf type from helper (default to cool_season)
+        turf_type = self._get_turf_type()
+        growth_config = TURF_GROWTH_RATES[turf_type]
+        
+        # Calculate daily growth in inches
+        base_growth = growth_config["base_growth_rate"]
+        daily_growth = daily_gdd * base_growth
+        
+        # Apply growth multiplier based on conditions
+        multiplier = self._calculate_growth_multiplier(daily_gdd, growth_config)
+        actual_growth = daily_growth * multiplier
+        
+        # Update accumulated growth
+        self.accumulated_growth += actual_growth
+        self.growth_multiplier = multiplier
+        self.estimated_growth_inches = actual_growth
+        
+        _LOGGER.debug(
+            f"Turf growth: {daily_gdd:.1f} GDD → {actual_growth:.3f}\" "
+            f"(multiplier: {multiplier:.2f}x, total: {self.accumulated_growth:.2f}\")"
+        )
+
+    def _get_turf_type(self) -> str:
+        """Determine turf type from helper or base temperature."""
+        # Check if user has set turf type helper
+        turf_type_state = self.hass.states.get("input_select.gdd_turf_type")
+        if turf_type_state and turf_type_state.state:
+            return turf_type_state.state
+        
+        # Fallback: guess based on base temperature
+        # Cool season grasses typically use lower base temps
+        return "cool_season" if self.base_temp <= 10 else "warm_season"
+
+    def _calculate_growth_multiplier(self, daily_gdd: float, growth_config: dict) -> float:
+        """Calculate growth rate multiplier based on GDD conditions."""
+        optimal_min, optimal_max = growth_config["optimal_gdd_range"]
+        dormancy_threshold = growth_config["dormancy_threshold"]
+        stress_threshold = growth_config["stress_threshold"]
+        
+        if daily_gdd <= dormancy_threshold:
+            # Dormant/minimal growth
+            return 0.1
+        elif daily_gdd < optimal_min:
+            # Slow growth, ramping up
+            return 0.3 + (daily_gdd - dormancy_threshold) * 0.7 / (optimal_min - dormancy_threshold)
+        elif optimal_min <= daily_gdd <= optimal_max:
+            # Optimal growth range
+            return 1.0
+        elif daily_gdd <= stress_threshold:
+            # Fast growth, stress building
+            excess_ratio = (daily_gdd - optimal_max) / (stress_threshold - optimal_max)
+            return 1.0 + (excess_ratio * 1.5)  # Up to 2.5x normal growth
+        else:
+            # Heat stress, reduced growth
+            return 0.8
 
     def reset_all(self):
         """Reset all GDD values."""
@@ -320,7 +401,16 @@ class GDDCoordinator(DataUpdateCoordinator):
         self.tracked_daily_min = None
         self.tracked_daily_max = None
         self.daily_temps = []
+        self.weekly_gdd_history = []
+        self.days_since_mow = 0
+        self.accumulated_growth = 0.0
         _LOGGER.info("All GDD values reset")
+
+    def record_mowing(self):
+        """Record that mowing occurred, reset growth tracking."""
+        self.days_since_mow = 0
+        self.accumulated_growth = 0.0
+        _LOGGER.info("Mowing recorded, growth tracking reset")
 
     def set_seasonal_gdd(self, value: float):
         """Manually set seasonal GDD value."""
@@ -338,6 +428,79 @@ class GDDCoordinator(DataUpdateCoordinator):
         if self.daily_min is None or self.daily_max is None:
             return 0.0
         return self._calculate_daily_gdd(self.daily_min, self.daily_max)
+
+    @property
+    def growth_rate_multiplier(self) -> float:
+        """Current growth rate multiplier."""
+        return getattr(self, 'growth_multiplier', 1.0)
+
+    @property
+    def mowing_recommendation(self) -> str:
+        """Get mowing recommendation based on accumulated growth."""
+        # Get maintenance level from helper
+        maintenance_state = self.hass.states.get("input_select.gdd_maintenance_level")
+        maintenance_level = maintenance_state.state if maintenance_state else "medium_maintenance"
+        
+        threshold = MOWING_THRESHOLDS.get(maintenance_level, MOWING_THRESHOLDS["medium_maintenance"])
+        
+        if self.accumulated_growth < threshold * 0.5:
+            return "No mowing needed"
+        elif self.accumulated_growth < threshold * 0.8:
+            return "Mowing soon"
+        elif self.accumulated_growth < threshold:
+            return "Mowing recommended"
+        elif self.accumulated_growth < threshold * 1.5:
+            return "Mowing overdue"
+        else:
+            return "Mowing critical"
+
+    @property
+    def pgr_recommendation(self) -> str:
+        """Get PGR application recommendation based on weekly GDD."""
+        if self.weekly_gdd < PGR_THRESHOLDS["preventive"]:
+            return "No PGR needed"
+        elif self.weekly_gdd < PGR_THRESHOLDS["active"]:
+            return "Consider preventive PGR"
+        elif self.weekly_gdd < PGR_THRESHOLDS["rescue"]:
+            return "Apply active PGR"
+        else:
+            return "Rescue PGR needed"
+
+    @property
+    def growth_forecast(self) -> str:
+        """Generate growth forecast message."""
+        multiplier = self.growth_rate_multiplier
+        
+        if multiplier <= 0.3:
+            return "Minimal growth expected (dormant conditions)"
+        elif multiplier <= 0.7:
+            return f"Slow growth expected ({multiplier:.1f}× normal rate)"
+        elif multiplier <= 1.3:
+            return f"Normal growth expected ({multiplier:.1f}× normal rate)"
+        elif multiplier <= 2.0:
+            return f"Fast growth expected ({multiplier:.1f}× normal rate)"
+        else:
+            return f"Rapid growth expected ({multiplier:.1f}× normal rate)"
+
+    @property
+    def days_to_next_mow(self) -> int:
+        """Estimate days until next mowing needed."""
+        if self.growth_multiplier <= 0:
+            return 14  # Default for dormant conditions
+            
+        # Get maintenance threshold
+        maintenance_state = self.hass.states.get("input_select.gdd_maintenance_level")
+        maintenance_level = maintenance_state.state if maintenance_state else "medium_maintenance"
+        threshold = MOWING_THRESHOLDS.get(maintenance_level, MOWING_THRESHOLDS["medium_maintenance"])
+        
+        # Calculate remaining growth needed
+        remaining_growth = max(0, threshold - self.accumulated_growth)
+        
+        # Estimate based on recent growth rate
+        if self.estimated_growth_inches > 0:
+            return max(1, int(remaining_growth / self.estimated_growth_inches))
+        
+        return 7  # Default weekly interval
 
     @property
     def data_source_info(self) -> dict:
