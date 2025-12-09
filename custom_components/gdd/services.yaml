@@ -33,3 +33,7 @@ set_base_temperature:
           max: 50
           step: 0.1
           unit_of_measurement: "°C"
+
+record_mowing:
+  name: Record Mowing
+  description: Record that mowing occurred and reset growth tracking.
