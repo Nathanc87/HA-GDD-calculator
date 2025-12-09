@@ -29,25 +29,17 @@ DAILY_UPDATE_TIME = "00:30"  # Daily calculations at 12:30 AM
 
 # Turf Management Constants
 TURF_GROWTH_RATES = {
-    "cool_season": {
-        "base_growth_rate": 0.15,  # inches per GDD
-        "optimal_gdd_range": (5, 15),  # Daily GDD for optimal growth
-        "dormancy_threshold": 2,  # GDD below which grass goes dormant
-        "stress_threshold": 20,  # GDD above which grass is stressed
-    },
-    "warm_season": {
-        "base_growth_rate": 0.12,  # inches per GDD
-        "optimal_gdd_range": (8, 20),  # Daily GDD for optimal growth
-        "dormancy_threshold": 3,  # GDD below which grass goes dormant
-        "stress_threshold": 25,  # GDD above which grass is stressed
-    }
+    "base_growth_rate": 0.3,  # mm per GDD (realistic: ~3-5mm/day peak)
+    "optimal_gdd_range": (8, 20),  # Daily GDD for optimal growth
+    "dormancy_threshold": 3,  # GDD below which grass goes dormant
+    "stress_threshold": 25,  # GDD above which grass is stressed
 }
 
 # Mowing recommendations
 MOWING_THRESHOLDS = {
-    "low_maintenance": 1.0,    # inches before mowing needed
-    "medium_maintenance": 0.75, # inches before mowing needed
-    "high_maintenance": 0.5,   # inches before mowing needed
+    "low_maintenance": 25,    # mm before mowing needed (was 1.0 inch)
+    "medium_maintenance": 19, # mm before mowing needed (was 0.75 inch)
+    "high_maintenance": 13,   # mm before mowing needed (was 0.5 inch)
 }
 
 # PGR application thresholds (cumulative weekly GDD)
