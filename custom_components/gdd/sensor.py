@@ -52,7 +52,7 @@ class GDDBaseSensor(SensorEntity, RestoreEntity):
             manufacturer="Custom",
             name="GDD Calculator",
             model="Growing Degree Day Engine",
-            sw_version="1.1.1",
+            sw_version="1.1.3",
             suggested_area="Garden",
         )
 
@@ -194,7 +194,7 @@ class GDDSeasonalSensor(GDDBaseSensor):
 
 
 class GDDProgressSensor(GDDBaseSensor):
-    """GDD progress toward threshold sensor."""
+    """GDD progress toward threshold sensor - shows positive progress until target reached."""
     
     _attr_name = "GDD Progress"
     _attr_unique_id = "gdd_progress"
@@ -208,7 +208,7 @@ class GDDProgressSensor(GDDBaseSensor):
 
     @property
     def native_value(self) -> Optional[float]:
-        """Return GDD progress (positive = above threshold, negative = below)."""
+        """Return GDD progress toward threshold (positive = progress made, negative = over target)."""
         threshold_entity = self.hass.states.get("input_number.gdd_threshold")
         if not threshold_entity or not hasattr(self.coordinator, 'seasonal_gdd'):
             return None
@@ -216,9 +216,39 @@ class GDDProgressSensor(GDDBaseSensor):
         try:
             threshold = float(threshold_entity.state)
             seasonal = self.coordinator.seasonal_gdd
-            return round(seasonal - threshold, 1)  # Positive = above, negative = below
+            
+            if seasonal <= threshold:
+                # Show positive progress toward target
+                return round(seasonal, 1)
+            else:
+                # Show negative when over target (excess)
+                return round(seasonal - threshold, 1)
+                
         except (ValueError, TypeError):
             return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return additional progress info."""
+        threshold_entity = self.hass.states.get("input_number.gdd_threshold")
+        if not threshold_entity or not hasattr(self.coordinator, 'seasonal_gdd'):
+            return {}
+        
+        try:
+            threshold = float(threshold_entity.state)
+            seasonal = self.coordinator.seasonal_gdd
+            remaining = max(0, threshold - seasonal)
+            percentage = min(100, (seasonal / threshold) * 100) if threshold > 0 else 0
+            
+            return {
+                "threshold": threshold,
+                "seasonal_gdd": seasonal,
+                "remaining_to_target": round(remaining, 1),
+                "percentage_complete": round(percentage, 1),
+                "over_target": seasonal > threshold
+            }
+        except (ValueError, TypeError):
+            return {}
 
     @property
     def extra_state_attributes(self) -> dict:
